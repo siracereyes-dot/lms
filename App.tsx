@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { 
@@ -12,16 +11,16 @@ import {
   Menu,
   AlertTriangle
 } from 'lucide-react';
-import { supabase } from './lib/supabase';
-import { Profile, UserRole } from './types';
+import { supabase } from './lib/supabase.ts';
+import { Profile, UserRole } from './types.ts';
 
 // Components
-import Auth from './components/Auth';
-import Dashboard from './components/Dashboard';
-import LessonDetail from './components/LessonDetail';
-import QuizView from './components/QuizView';
-import Gradebook from './components/Gradebook';
-import ActivityUpload from './components/ActivityUpload';
+import Auth from './components/Auth.tsx';
+import Dashboard from './components/Dashboard.tsx';
+import LessonDetail from './components/LessonDetail.tsx';
+import QuizView from './components/QuizView.tsx';
+import Gradebook from './components/Gradebook.tsx';
+import ActivityUpload from './components/ActivityUpload.tsx';
 
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -34,7 +33,10 @@ const App: React.FC = () => {
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
+        if (error) {
+          // If Supabase is not configured, this will throw
+          throw error;
+        }
 
         setSession(session);
         if (session) {
@@ -44,7 +46,7 @@ const App: React.FC = () => {
         }
       } catch (err: any) {
         console.error('Initialization error:', err);
-        setInitError('Failed to connect to the server. Please check your configuration.');
+        setInitError('Failed to connect to Supabase. Check your SUPABASE_URL and ANON_KEY.');
         setLoading(false);
       }
     };
@@ -90,6 +92,30 @@ const App: React.FC = () => {
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
         <p className="text-slate-500 font-medium animate-pulse">Lumina LMS is loading...</p>
+      </div>
+    );
+  }
+
+  // Handle initialization errors gracefully instead of a white screen
+  if (initError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-red-100 text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center text-red-600 mx-auto mb-6">
+            <AlertTriangle size={32} />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Setup Required</h2>
+          <p className="text-slate-500 mb-6">{initError}</p>
+          <div className="text-sm text-slate-400 bg-slate-50 p-4 rounded-xl text-left">
+            <p className="font-bold mb-1">Steps to fix:</p>
+            <ol className="list-decimal ml-4 space-y-1">
+              <li>Open your Vercel Project Settings</li>
+              <li>Add <code className="text-indigo-600">SUPABASE_URL</code></li>
+              <li>Add <code className="text-indigo-600">SUPABASE_ANON_KEY</code></li>
+              <li>Redeploy your application</li>
+            </ol>
+          </div>
+        </div>
       </div>
     );
   }

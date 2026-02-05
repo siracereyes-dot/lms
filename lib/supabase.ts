@@ -1,14 +1,14 @@
-
 import { createClient } from '@supabase/supabase-js';
 
-// Configuration
-const supabaseUrl = 'https://vzlfhjzqxqolxropbzkj.supabase.co';
-const supabaseAnonKey = 'your-placeholder-anon-key'; 
+// Configuration - Favor environment variables for production/Vercel
+const supabaseUrl = process.env.SUPABASE_URL || 'https://vzlfhjzqxqolxropbzkj.supabase.co';
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'your-placeholder-anon-key'; 
 
 // Basic validation to prevent app hanging/crashing on invalid init
 const isValidConfig = supabaseUrl && 
                      supabaseAnonKey && 
-                     !supabaseAnonKey.includes('placeholder');
+                     !supabaseAnonKey.includes('placeholder') &&
+                     supabaseAnonKey !== 'invalid-key-prevent-crash';
 
 export const supabase = createClient(
   supabaseUrl, 
