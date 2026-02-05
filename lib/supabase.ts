@@ -1,33 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
 
-/**
- * Safely access environment variables.
- * This prevents the fatal 'process is not defined' error in standard browser ESM environments.
- */
-const safeGetEnv = (key: string): string | undefined => {
-  try {
-    if (typeof process !== 'undefined' && process.env) {
-      return process.env[key];
-    }
-  } catch (e) {
-    // Ignore error
+// Access environment variables with a fallback check
+const getEnv = (key: string): string => {
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return process.env[key] as string;
   }
-  return undefined;
+  // Check window for common shims
+  if ((window as any).process?.env?.[key]) {
+    return (window as any).process.env[key];
+  }
+  return '';
 };
 
-// Configuration - Favor environment variables for production/Vercel
-const supabaseUrl = safeGetEnv('SUPABASE_URL') || 'https://vzlfhjzqxqolxropbzkj.supabase.co';
-const supabaseAnonKey = safeGetEnv('SUPABASE_ANON_KEY') || 'your-placeholder-anon-key'; 
+const supabaseUrl = getEnv('SUPABASE_URL') || 'https://vzlfhjzqxqolxropbzkj.supabase.co';
+const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY');
 
-// Basic validation to prevent app hanging/crashing on invalid init
-const isValidConfig = supabaseUrl && 
-                     supabaseAnonKey && 
-                     !supabaseAnonKey.includes('placeholder') &&
-                     supabaseAnonKey !== 'invalid-key-prevent-crash';
+// Initialize with an explicit check to avoid silent failures
+if (!supabaseAnonKey) {
+  console.warn("Supabase Anon Key is missing. Database operations will fail.");
+}
 
 export const supabase = createClient(
   supabaseUrl, 
-  isValidConfig ? supabaseAnonKey : 'invalid-key-prevent-crash'
+  supabaseAnonKey || 'missing-key-placeholder'
 );
 
 /**
@@ -42,16 +37,16 @@ export async function getCurrentProfile() {
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
-      console.warn('Profile not found for user:', user.id);
+      console.error('Error fetching profile:', profileError);
       return null;
     }
 
     return profile;
   } catch (e) {
-    console.error('Error in getCurrentProfile:', e);
+    console.error('Unexpected error in getCurrentProfile:', e);
     return null;
   }
 }

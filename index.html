@@ -32,17 +32,16 @@
 }
 </script>
     <script>
-      // Global error handler to help catch silent crashes in production
       window.onerror = function(msg, url, line, col, error) {
-        console.error("Lumina Global Error: ", msg, " at ", url, ":", line);
-        // If it's a process error, provide feedback in the UI instead of a blank screen
+        console.error("Lumina Global Error: ", msg, error);
         if (msg.toLowerCase().includes("process is not defined") || (error && error.message && error.message.includes("process"))) {
           document.body.innerHTML = `
             <div style="padding: 40px; text-align: center; font-family: sans-serif; background: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center;">
-              <div style="max-width: 400px; background: white; padding: 32px; border-radius: 24px; border: 1px solid #fee2e2; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
-                <h1 style="color: #ef4444; margin-bottom: 8px;">Configuration Error</h1>
-                <p style="color: #64748b; font-size: 14px; line-height: 1.5;">The application failed to start because 'process.env' is missing. This usually happens when the deployment environment doesn't shim Node.js variables.</p>
-                <button onclick="location.reload()" style="margin-top: 24px; background: #4f46e5; color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer;">Retry Application</button>
+              <div style="max-width: 440px; background: white; padding: 32px; border-radius: 24px; border: 1px solid #fee2e2; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+                <div style="color: #ef4444; font-size: 48px; margin-bottom: 16px;">⚠️</div>
+                <h1 style="color: #0f172a; margin-bottom: 8px; font-size: 24px;">Configuration Required</h1>
+                <p style="color: #64748b; font-size: 14px; line-height: 1.6;">Lumina requires environment variables to connect to Supabase and Gemini. Please ensure <b>SUPABASE_URL</b>, <b>SUPABASE_ANON_KEY</b>, and <b>API_KEY</b> are set.</p>
+                <button onclick="location.reload()" style="margin-top: 24px; background: #4f46e5; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; width: 100%;">Retry Application</button>
               </div>
             </div>`;
         }

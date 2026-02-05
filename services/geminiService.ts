@@ -1,27 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 
-/**
- * Safely access environment variables.
- */
-const safeGetEnv = (key: string): string | undefined => {
-  try {
-    if (typeof process !== 'undefined' && process.env) {
-      return process.env[key];
-    }
-  } catch (e) {}
-  return undefined;
-};
-
-const apiKey = safeGetEnv('API_KEY');
-
-// Initialize the Gemini API client safely
-const ai = new GoogleGenAI({ apiKey: apiKey || 'missing-api-key' });
+// Initialize the Gemini API client using the environment variable directly
+// The system ensures process.env.API_KEY is available and valid in the execution context.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getAIExplanation = async (lessonContent: string, question: string) => {
-  if (!apiKey || apiKey === 'missing-api-key') {
-    return "AI Study Assistant is currently not configured. Please add an API_KEY to your environment variables.";
-  }
-  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -32,17 +15,16 @@ export const getAIExplanation = async (lessonContent: string, question: string) 
       },
     });
     return response.text;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini Error:", error);
+    if (error.message?.includes("API key not valid")) {
+      return "The AI service is reporting an invalid API key. Please check your project settings.";
+    }
     return "I'm sorry, I'm having trouble connecting to my brain right now. Please try again in a moment!";
   }
 };
 
 export const generateQuizHints = async (question: string) => {
-  if (!apiKey || apiKey === 'missing-api-key') {
-    return "Think carefully about the key concepts from the lesson content!";
-  }
-  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
