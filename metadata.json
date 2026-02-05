@@ -1,0 +1,8 @@
+{
+  "name": "Lumina LMS",
+  "description": "A comprehensive Learning Management System featuring Supabase auth, role-based dashboards, interactive quizzes, Google Drive activity submissions, and a built-in Gemini AI tutor.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
