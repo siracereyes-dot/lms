@@ -25,21 +25,32 @@ const Gradebook: React.FC = () => {
 
   const fetchSubmissions = async () => {
     setLoading(true);
-    // Join with profiles to get student names
-    const { data, error } = await supabase
-      .from('submissions')
-      .select('*, user_profile:profiles(*)')
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('submissions')
+        .select('*, user_profile:profiles(*)')
+        .order('created_at', { ascending: false });
 
-    if (error) console.error('Error fetching submissions:', error);
-    else if (data) setSubmissions(data as any);
-    setLoading(false);
+      if (error) throw error;
+      if (data) setSubmissions(data as any);
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filteredSubmissions = submissions.filter(s => 
-    s.user_profile?.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.activity_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const getStudentName = (submission: Submission) => {
+    const profile = submission.user_profile;
+    if (Array.isArray(profile)) return profile[0]?.full_name || 'Unknown';
+    return profile?.full_name || 'Unknown';
+  };
+
+  const filteredSubmissions = submissions.filter(s => {
+    const name = getStudentName(s);
+    return name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           s.activity_name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -94,45 +105,48 @@ const Gradebook: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredSubmissions.map((submission) => (
-                  <tr key={submission.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold">
-                          {submission.user_profile?.full_name.charAt(0)}
+                {filteredSubmissions.map((submission) => {
+                  const name = getStudentName(submission);
+                  return (
+                    <tr key={submission.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold">
+                            {name.charAt(0)}
+                          </div>
+                          <span className="text-sm font-semibold text-slate-900">
+                            {name}
+                          </span>
                         </div>
-                        <span className="text-sm font-semibold text-slate-900">
-                          {submission.user_profile?.full_name}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-slate-600">{submission.activity_name}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <Clock size={14} />
-                        {new Date(submission.created_at).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <a 
-                        href={submission.drive_link} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 text-sm font-medium"
-                      >
-                        View File
-                        <ExternalLink size={14} />
-                      </a>
-                    </td>
-                    <td className="px-6 py-4">
-                      <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
-                        <MoreVertical size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="text-sm text-slate-600">{submission.activity_name}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                          <Clock size={14} />
+                          {new Date(submission.created_at).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <a 
+                          href={submission.drive_link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                        >
+                          View File
+                          <ExternalLink size={14} />
+                        </a>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
+                          <MoreVertical size={18} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {filteredSubmissions.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">

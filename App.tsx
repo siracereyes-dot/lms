@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { 
   BookOpen, 
   LayoutDashboard, 
@@ -44,7 +44,7 @@ const App: React.FC = () => {
         }
       } catch (err: any) {
         console.error('Initialization error:', err);
-        setInitError('Failed to connect to the server. Please check your connection or configuration.');
+        setInitError('Failed to connect to the server. Please check your configuration.');
         setLoading(false);
       }
     };
@@ -70,15 +70,12 @@ const App: React.FC = () => {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching profile:', error);
-      } else {
-        setProfile(data);
-      }
+      if (error) throw error;
+      if (data) setProfile(data);
     } catch (err) {
-      console.error('fetchProfile unexpected error:', err);
+      console.error('fetchProfile error:', err);
     } finally {
       setLoading(false);
     }
@@ -92,25 +89,7 @@ const App: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-        <p className="text-slate-500 font-medium animate-pulse">Initializing Lumina LMS...</p>
-      </div>
-    );
-  }
-
-  if (initError && !session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl border border-red-100 max-w-md text-center">
-          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Connection Error</h2>
-          <p className="text-slate-600 mb-6">{initError}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700"
-          >
-            Try Again
-          </button>
-        </div>
+        <p className="text-slate-500 font-medium animate-pulse">Lumina LMS is loading...</p>
       </div>
     );
   }
@@ -156,7 +135,7 @@ const App: React.FC = () => {
                   <User size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{profile?.full_name || 'Loading...'}</p>
+                  <p className="text-sm font-semibold truncate">{profile?.full_name || 'User'}</p>
                   <p className="text-xs text-slate-400 truncate">{profile?.role}</p>
                 </div>
               </div>
@@ -199,7 +178,9 @@ const App: React.FC = () => {
 };
 
 const NavLink: React.FC<{ to: string; icon: React.ReactNode; label: string }> = ({ to, icon, label }) => {
-  const isActive = window.location.hash === `#${to}` || (to === '/' && window.location.hash === '#/');
+  const location = useLocation();
+  const isActive = location.pathname === to || (to === '/' && location.pathname === '');
+  
   return (
     <Link 
       to={to} 
