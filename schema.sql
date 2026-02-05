@@ -1,9 +1,13 @@
+-- 1. Create custom types if they don't exist
+DO $$ BEGIN
+    CREATE TYPE user_role AS ENUM ('Teacher', 'Student');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
--- 1. Create custom types
-CREATE TYPE user_role AS ENUM ('Teacher', 'Student');
-
--- 2. Create Profiles table (linked to Auth)
-CREATE TABLE profiles (
+-- 2. Create Profiles table (This is where user details are stored)
+-- Note: auth.users is managed by Supabase and is in the 'auth' schema.
+CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   full_name TEXT NOT NULL,
   role user_role DEFAULT 'Student' NOT NULL,
@@ -11,7 +15,7 @@ CREATE TABLE profiles (
 );
 
 -- 3. Create Lessons table
-CREATE TABLE lessons (
+CREATE TABLE IF NOT EXISTS lessons (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
@@ -20,7 +24,7 @@ CREATE TABLE lessons (
 );
 
 -- 4. Create Quizzes table
-CREATE TABLE quizzes (
+CREATE TABLE IF NOT EXISTS quizzes (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   lesson_id UUID REFERENCES lessons(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
@@ -29,7 +33,7 @@ CREATE TABLE quizzes (
 );
 
 -- 5. Create Submissions table
-CREATE TABLE submissions (
+CREATE TABLE IF NOT EXISTS submissions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   activity_name TEXT NOT NULL,
@@ -38,7 +42,7 @@ CREATE TABLE submissions (
 );
 
 -- 6. Create User Progress table
-CREATE TABLE user_progress (
+CREATE TABLE IF NOT EXISTS user_progress (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   lesson_id UUID REFERENCES lessons(id) ON DELETE CASCADE NOT NULL,
@@ -53,42 +57,63 @@ ALTER TABLE quizzes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_progress ENABLE ROW LEVEL SECURITY;
 
--- 8. POLICIES
+-- 8. POLICIES (Using DO blocks to prevent 'already exists' errors)
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Public profiles are viewable by everyone.') THEN
+        CREATE POLICY "Public profiles are viewable by everyone." ON profiles FOR SELECT USING (true);
+    END IF;
+END $$;
 
--- Profiles: Anyone authenticated can read profiles (to see names), only owner can update
-CREATE POLICY "Public profiles are viewable by everyone." ON profiles FOR SELECT USING (true);
-CREATE POLICY "Users can update own profile." ON profiles FOR UPDATE USING (auth.uid() = id);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can update own profile.') THEN
+        CREATE POLICY "Users can update own profile." ON profiles FOR UPDATE USING (auth.uid() = id);
+    END IF;
+END $$;
 
--- Lessons: Students/Teachers can read, only Teachers can CRUD
-CREATE POLICY "Lessons are viewable by everyone." ON lessons FOR SELECT USING (true);
-CREATE POLICY "Only teachers can manage lessons." ON lessons FOR ALL 
-  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'Teacher'));
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Lessons are viewable by everyone.') THEN
+        CREATE POLICY "Lessons are viewable by everyone." ON lessons FOR SELECT USING (true);
+    END IF;
+END $$;
 
--- Quizzes: Same as lessons
-CREATE POLICY "Quizzes are viewable by everyone." ON quizzes FOR SELECT USING (true);
-CREATE POLICY "Only teachers can manage quizzes." ON quizzes FOR ALL 
-  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'Teacher'));
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Only teachers can manage lessons.') THEN
+        CREATE POLICY "Only teachers can manage lessons." ON lessons FOR ALL 
+        USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'Teacher'));
+    END IF;
+END $$;
 
--- Submissions: Students see own, Teachers see all
-CREATE POLICY "Users can view own submissions." ON submissions FOR SELECT 
-  USING (auth.uid() = user_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'Teacher'));
-CREATE POLICY "Students can insert submissions." ON submissions FOR INSERT 
-  WITH CHECK (auth.uid() = user_id);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Quizzes are viewable by everyone.') THEN
+        CREATE POLICY "Quizzes are viewable by everyone." ON quizzes FOR SELECT USING (true);
+    END IF;
+END $$;
 
--- User Progress: Students see/create own, Teachers see all
-CREATE POLICY "Users can view own progress." ON user_progress FOR SELECT 
-  USING (auth.uid() = user_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'Teacher'));
-CREATE POLICY "Students can update own progress." ON user_progress FOR INSERT 
-  WITH CHECK (auth.uid() = user_id);
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Only teachers can manage quizzes.') THEN
+        CREATE POLICY "Only teachers can manage quizzes." ON quizzes FOR ALL 
+        USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'Teacher'));
+    END IF;
+END $$;
 
--- 9. SEED DATA (Optional)
-INSERT INTO lessons (title, content) VALUES 
-('Introduction to React 19', 'React 19 brings exciting features like the "use" hook and automated memoization...'),
-('Understanding Supabase RLS', 'Row Level Security is the backbone of Supabase security. It allows you to write SQL rules that control access...');
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view own submissions.') THEN
+        CREATE POLICY "Users can view own submissions." ON submissions FOR SELECT 
+        USING (auth.uid() = user_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'Teacher'));
+    END IF;
+END $$;
 
--- 10. TRIGGER FOR NEW USERS
--- This function automatically creates a profile when someone signs up through Supabase Auth.
--- It extracts 'full_name' and 'role' from the auth metadata.
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Students can insert submissions.') THEN
+        CREATE POLICY "Students can insert submissions." ON submissions FOR INSERT 
+        WITH CHECK (auth.uid() = user_id);
+    END IF;
+END $$;
+
+-- 9. TRIGGER FOR NEW USERS
+-- Clean up existing trigger/function first to prevent 'already exists' errors
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
