@@ -1,8 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 
+/**
+ * Safely access environment variables.
+ * This prevents the fatal 'process is not defined' error in standard browser ESM environments.
+ */
+const safeGetEnv = (key: string): string | undefined => {
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      return process.env[key];
+    }
+  } catch (e) {
+    // Ignore error
+  }
+  return undefined;
+};
+
 // Configuration - Favor environment variables for production/Vercel
-const supabaseUrl = process.env.SUPABASE_URL || 'https://vzlfhjzqxqolxropbzkj.supabase.co';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'your-placeholder-anon-key'; 
+const supabaseUrl = safeGetEnv('SUPABASE_URL') || 'https://vzlfhjzqxqolxropbzkj.supabase.co';
+const supabaseAnonKey = safeGetEnv('SUPABASE_ANON_KEY') || 'your-placeholder-anon-key'; 
 
 // Basic validation to prevent app hanging/crashing on invalid init
 const isValidConfig = supabaseUrl && 

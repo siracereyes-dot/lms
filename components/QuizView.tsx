@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { Quiz, Profile, QuizQuestion } from '../types';
+import { supabase } from '../lib/supabase.ts';
+import { Quiz, Profile, QuizQuestion } from '../types.ts';
 import { Loader2, ArrowLeft, CheckCircle, XCircle, Award, Lightbulb } from 'lucide-react';
-import { generateQuizHints } from '../services/geminiService';
+import { generateQuizHints } from '../services/geminiService.ts';
 
 interface QuizViewProps {
   profile: Profile | null;

@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { Lesson, Profile } from '../types';
+import { supabase } from '../lib/supabase.ts';
+import { Lesson, Profile } from '../types.ts';
 import { 
   ArrowLeft, 
   CheckCircle, 
@@ -12,7 +11,7 @@ import {
   Send,
   User
 } from 'lucide-react';
-import { getAIExplanation } from '../services/geminiService';
+import { getAIExplanation } from '../services/geminiService.ts';
 
 interface LessonDetailProps {
   profile: Profile | null;

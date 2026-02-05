@@ -1,10 +1,27 @@
-
 import { GoogleGenAI } from "@google/genai";
 
-// Initialize the Gemini API client using the environment variable directly as per guidelines
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+/**
+ * Safely access environment variables.
+ */
+const safeGetEnv = (key: string): string | undefined => {
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      return process.env[key];
+    }
+  } catch (e) {}
+  return undefined;
+};
+
+const apiKey = safeGetEnv('API_KEY');
+
+// Initialize the Gemini API client safely
+const ai = new GoogleGenAI({ apiKey: apiKey || 'missing-api-key' });
 
 export const getAIExplanation = async (lessonContent: string, question: string) => {
+  if (!apiKey || apiKey === 'missing-api-key') {
+    return "AI Study Assistant is currently not configured. Please add an API_KEY to your environment variables.";
+  }
+  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -22,6 +39,10 @@ export const getAIExplanation = async (lessonContent: string, question: string) 
 };
 
 export const generateQuizHints = async (question: string) => {
+  if (!apiKey || apiKey === 'missing-api-key') {
+    return "Think carefully about the key concepts from the lesson content!";
+  }
+  
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',

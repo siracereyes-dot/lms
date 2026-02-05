@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { Lesson, Quiz, Profile, UserRole } from '../types';
-// Added ClipboardCheck to fixed the "Cannot find name 'ClipboardCheck'" error
+import { supabase } from '../lib/supabase.ts';
+import { Lesson, Quiz, Profile, UserRole } from '../types.ts';
 import { BookOpen, FileText, ChevronRight, Plus, Clock, Search, ClipboardCheck } from 'lucide-react';
 
 interface DashboardProps {

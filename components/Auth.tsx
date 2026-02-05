@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { UserRole } from '../types';
+import { supabase } from '../lib/supabase.ts';
+import { UserRole } from '../types.ts';
 import { Loader2, Mail, Lock, User as UserIcon } from 'lucide-react';
 
 const Auth: React.FC = () => {
@@ -20,7 +19,6 @@ const Auth: React.FC = () => {
 
     try {
       if (isSignUp) {
-        // Pass fullName and role as metadata so the DB trigger can create the profile automatically
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -33,9 +31,6 @@ const Auth: React.FC = () => {
         });
 
         if (signUpError) throw signUpError;
-        
-        // Note: With the SQL trigger active, we no longer need to manually insert into 'profiles' here.
-        // Doing so would cause a PK conflict with the trigger-inserted row.
         alert('Check your email for the confirmation link!');
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
